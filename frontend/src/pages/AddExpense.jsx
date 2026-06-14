@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Check } from 'lucide-react';
 
-export default function AddExpense({ users, activeUserId }) {
+export default function AddExpense({ users, activeUserId, activeGroupId }) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [currency, setCurrency] = useState('INR');
@@ -23,6 +23,7 @@ export default function AddExpense({ users, activeUserId }) {
     setLoading(true);
 
     const payload = {
+      groupId: activeGroupId,
       paid_by_user_id: activeUserId,
       amount: parseFloat(amount),
       currency,

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Import from './pages/Import';
 import AddExpense from './pages/AddExpense';
+import Groups from './pages/Groups';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -18,32 +19,48 @@ const ProtectedRoute = ({ children, token }) => {
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [activeUserId, setActiveUserId] = useState(localStorage.getItem('activeUserId') || null);
-  const [users, setUsers] = useState([]); // This would be group members in full implementation
+  const [activeGroupId, setActiveGroupId] = useState(localStorage.getItem('activeGroupId') || null);
+  const [groups, setGroups] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get('http://localhost:5000/api/users').then(res => {
-        setUsers(res.data);
-      }).catch(err => {
-        if (err.response?.status === 401) handleLogout();
-      });
+      fetchGroups();
     }
   }, [token]);
+
+  useEffect(() => {
+    if (activeGroupId && token) {
+      localStorage.setItem('activeGroupId', activeGroupId);
+      // Fetch users for the active group
+      axios.get(`http://localhost:5000/api/groups/${activeGroupId}/members`)
+        .then(res => setUsers(res.data))
+        .catch(console.error);
+    }
+  }, [activeGroupId, token]);
+
+  const fetchGroups = () => {
+    axios.get('http://localhost:5000/api/groups').then(res => {
+      setGroups(res.data);
+      if (res.data.length > 0 && !activeGroupId) {
+        setActiveGroupId(res.data[0].id.toString());
+      }
+    }).catch(err => {
+      if (err.response?.status === 401) handleLogout();
+    });
+  };
 
   const handleLogout = () => {
     setToken(null);
     setActiveUserId(null);
+    setActiveGroupId(null);
     localStorage.removeItem('token');
     localStorage.removeItem('activeUserId');
+    localStorage.removeItem('activeGroupId');
     delete axios.defaults.headers.common['Authorization'];
     window.location.href = '/login';
   };
-
-  // We temporarily keep activeUserId to simulate "Viewing As" within a group if needed,
-  // but true auth means we are always our logged-in user.
-  // For the sake of the existing dashboard code working smoothly until full group refactor,
-  // we pass the authenticated user's ID down.
 
   if (!token) {
     return (
@@ -64,13 +81,19 @@ function App() {
   return (
     <Router>
       <div className="layout">
-        <Navbar users={users} activeUserId={activeUserId} onLogout={handleLogout} />
+        <Navbar 
+          groups={groups} 
+          activeGroupId={activeGroupId} 
+          onGroupChange={setActiveGroupId} 
+          onLogout={handleLogout} 
+        />
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<ProtectedRoute token={token}><Dashboard activeUserId={activeUserId} /></ProtectedRoute>} />
-            <Route path="/expenses" element={<ProtectedRoute token={token}><Expenses /></ProtectedRoute>} />
-            <Route path="/expenses/add" element={<ProtectedRoute token={token}><AddExpense users={users} activeUserId={activeUserId} /></ProtectedRoute>} />
-            <Route path="/import" element={<ProtectedRoute token={token}><Import /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute token={token}><Dashboard activeGroupId={activeGroupId} activeUserId={activeUserId} /></ProtectedRoute>} />
+            <Route path="/groups" element={<ProtectedRoute token={token}><Groups groups={groups} onGroupsChanged={fetchGroups} /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute token={token}><Expenses activeGroupId={activeGroupId} /></ProtectedRoute>} />
+            <Route path="/expenses/add" element={<ProtectedRoute token={token}><AddExpense users={users} activeGroupId={activeGroupId} activeUserId={activeUserId} /></ProtectedRoute>} />
+            <Route path="/import" element={<ProtectedRoute token={token}><Import activeGroupId={activeGroupId} /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

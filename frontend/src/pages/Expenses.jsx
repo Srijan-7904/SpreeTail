@@ -2,24 +2,23 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 
-export default function Expenses() {
+export default function Expenses({ activeGroupId }) {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-  const fetchExpenses = async () => {
-    try {
-      const res = await axios.get('http://localhost:5000/api/expenses');
-      setExpenses(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (activeGroupId) {
+      axios.get(`http://localhost:5000/api/expenses?groupId=${activeGroupId}`)
+        .then(res => {
+          setExpenses(res.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
     }
-  };
+  }, [activeGroupId]);
 
   if (loading) return <div>Loading...</div>;
 

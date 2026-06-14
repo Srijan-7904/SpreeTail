@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Upload, AlertTriangle, Check, X } from 'lucide-react';
 
-export default function Import() {
+export default function Import({ activeGroupId }) {
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +35,7 @@ export default function Import() {
     setLoading(true);
     try {
       await axios.post('http://localhost:5000/api/expenses/import/confirm', {
+        groupId: activeGroupId,
         resolvedData: previewData.processed,
         anomalies: previewData.anomalies
       });

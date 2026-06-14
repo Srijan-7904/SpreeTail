@@ -14,16 +14,7 @@ const dbPromise = open({
 export const initDb = async () => {
   const db = await dbPromise;
 
-    // Drop existing for clean reset
-    await db.exec(`
-      DROP TABLE IF EXISTS expense_splits;
-      DROP TABLE IF EXISTS expenses;
-      DROP TABLE IF EXISTS group_members;
-      DROP TABLE IF EXISTS groups;
-      DROP TABLE IF EXISTS users;
-      DROP TABLE IF EXISTS anomalies_log;
-    `);
-
+    // Clean DB setup (tables will not be dropped on restart)
     await db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

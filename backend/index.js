@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dbPromise, { initDb } from './db.js';
-import { generatePreview, processCSV } from './importEngine.js';
+import { processCSV } from './importEngine.js';
 import { requireAuth, generateToken } from './auth.js';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
@@ -168,17 +168,15 @@ app.post('/api/expenses/import/preview', upload.single('file'), async (req, res)
 });
 
 app.post('/api/expenses/import/confirm', async (req, res) => {
-  const { resolvedData, anomalies } = req.body;
+  const { resolvedData, anomalies, groupId } = req.body;
   
-  if (!resolvedData || !Array.isArray(resolvedData)) {
-    return res.status(400).json({ error: 'Invalid data format' });
+  if (!resolvedData || !Array.isArray(resolvedData) || !groupId) {
+    return res.status(400).json({ error: 'Invalid data format or missing groupId' });
   }
 
   try {
     const db = await dbPromise;
     await db.exec('BEGIN TRANSACTION');
-
-    const groupId = 1; // Default Flatmates group for this assignment
 
     // Insert anomalies log
     if (anomalies && anomalies.length > 0) {
@@ -274,10 +272,17 @@ app.post('/api/expenses/import/confirm', async (req, res) => {
     res.json({ success: true, message: 'Data imported successfully' });
   } catch (err) {
     await (await dbPromise).exec('ROLLBACK');
-app.get('/api/users', requireAuth, async (req, res) => {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/search', requireAuth, async (req, res) => {
   try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
     const db = await dbPromise;
-    const users = await db.all('SELECT id, name FROM users');
+    const users = await db.all('SELECT id, name, email FROM users WHERE name LIKE ? OR email LIKE ? LIMIT 10', [`%${q}%`, `%${q}%`]);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -286,13 +291,17 @@ app.get('/api/users', requireAuth, async (req, res) => {
 
 app.get('/api/expenses', requireAuth, async (req, res) => {
   try {
+    const groupId = req.query.groupId;
+    if (!groupId) return res.status(400).json({ error: 'groupId is required' });
+
     const db = await dbPromise;
     const expenses = await db.all(`
       SELECT e.id, e.amount, e.currency, e.description, e.date, e.split_type, e.is_settlement, u.name as paid_by
       FROM expenses e
       JOIN users u ON e.paid_by_user_id = u.id
+      WHERE e.group_id = ?
       ORDER BY e.date DESC, e.id DESC
-    `);
+    `, [groupId]);
     res.json(expenses);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -301,6 +310,9 @@ app.get('/api/expenses', requireAuth, async (req, res) => {
 
 app.get('/api/balances', requireAuth, async (req, res) => {
   try {
+    const groupId = req.query.groupId;
+    if (!groupId) return res.status(400).json({ error: 'groupId is required' });
+
     const db = await dbPromise;
     // Get all expenses and their splits
     const expenses = await db.all(`
@@ -308,19 +320,27 @@ app.get('/api/balances', requireAuth, async (req, res) => {
              u.name as paid_by_name
       FROM expenses e
       JOIN users u ON e.paid_by_user_id = u.id
-    `);
+      WHERE e.group_id = ?
+    `, [groupId]);
 
     const splits = await db.all(`
       SELECT s.expense_id, s.user_id, s.amount_owed, u.name as owe_name
       FROM expense_splits s
       JOIN users u ON s.user_id = u.id
-    `);
+      JOIN expenses e ON s.expense_id = e.id
+      WHERE e.group_id = ?
+    `, [groupId]);
 
     // We will compute balances per currency
     const balances = {}; // { [currency]: { [userId]: balance } }
     
     // Initialize users
-    const users = await db.all('SELECT id, name FROM users');
+    const users = await db.all(`
+      SELECT u.id, u.name 
+      FROM users u 
+      JOIN group_members gm ON u.id = gm.user_id 
+      WHERE gm.group_id = ?
+    `, [groupId]);
     users.forEach(u => {
       balances['INR'] = balances['INR'] || {};
       balances['INR'][u.id] = 0;
@@ -381,9 +401,9 @@ app.get('/api/balances/details/:userId', async (req, res) => {
 });
 
 app.post('/api/expenses', async (req, res) => {
-  const { paid_by_user_id, amount, currency, description, split_type, date, splitUsers } = req.body;
+  const { groupId, paid_by_user_id, amount, currency, description, split_type, date, splitUsers } = req.body;
   
-  if (!paid_by_user_id || !amount || !description || !splitUsers || splitUsers.length === 0) {
+  if (!groupId || !paid_by_user_id || !amount || !description || !splitUsers || splitUsers.length === 0) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -394,7 +414,7 @@ app.post('/api/expenses', async (req, res) => {
     const expRes = await db.run(
       `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, date, split_type, is_settlement)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [1, paid_by_user_id, amount, currency || 'INR', description, date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
+      [groupId, paid_by_user_id, amount, currency || 'INR', description, date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
     );
 
     const expenseId = expRes.lastID;
@@ -423,6 +443,15 @@ app.post('/api/expenses', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// --- Import Engine Logic ---
+async function generatePreview(rawData) {
+  const db = await dbPromise;
+  const users = await db.all('SELECT * FROM users');
+  const userMap = new Map(users.map(u => [u.name.toLowerCase(), u.id]));
+
+  return processCSV(rawData, userMap);
+}
 
 // Start server
 const startServer = async () => {

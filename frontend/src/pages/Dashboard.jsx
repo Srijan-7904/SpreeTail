@@ -2,22 +2,23 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 
-export default function Dashboard({ activeUserId }) {
+export default function Dashboard({ activeGroupId, activeUserId }) {
   const [data, setData] = useState(null);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBalances();
-  }, [activeUserId]);
+  }, [activeGroupId, activeUserId]);
 
   const fetchBalances = async () => {
+    if (!activeGroupId) return;
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/balances');
+      const res = await axios.get(`http://localhost:5000/api/balances?groupId=${activeGroupId}`);
       setData(res.data);
       if (activeUserId) {
-        const detailsRes = await axios.get(`http://localhost:5000/api/balances/details/${activeUserId}`);
+        const detailsRes = await axios.get(`http://localhost:5000/api/balances/details/${activeUserId}?groupId=${activeGroupId}`);
         setDetails(detailsRes.data);
       }
     } catch (err) {

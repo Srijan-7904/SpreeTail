@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { Wallet, List, Upload, PlusCircle, UserCircle } from 'lucide-react';
+import { Wallet, List, Upload, PlusCircle, UserCircle, Users } from 'lucide-react';
 
-export default function Navbar({ users, activeUserId, onLogout }) {
+export default function Navbar({ groups, activeGroupId, onGroupChange, onLogout }) {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
@@ -9,6 +9,21 @@ export default function Navbar({ users, activeUserId, onLogout }) {
         <span>FairSplit</span>
       </div>
       <div className="navbar-links">
+        <div className="flex items-center gap-2 mr-4 pr-4 border-r border-slate-600">
+          <Users size={18} className="text-muted" />
+          <select 
+            value={activeGroupId || ''} 
+            onChange={(e) => onGroupChange(e.target.value)}
+            className="bg-transparent border-none text-sm p-1 cursor-pointer focus:ring-0 font-bold"
+            style={{width: 'auto'}}
+          >
+            {groups.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+          <NavLink to="/groups" className="text-xs text-primary hover:underline ml-2">Manage</NavLink>
+        </div>
+
         <NavLink to="/" className={({isActive}) => isActive ? "active flex items-center gap-2" : "flex items-center gap-2"}>
           <Wallet size={18} /> Dashboard
         </NavLink>
