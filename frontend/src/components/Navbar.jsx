@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Wallet, List, Upload, PlusCircle, UserCircle } from 'lucide-react';
 
-export default function Navbar({ users, activeUserId, onUserChange }) {
+export default function Navbar({ users, activeUserId, onLogout }) {
   return (
     <nav className="navbar">
       <div className="navbar-brand">

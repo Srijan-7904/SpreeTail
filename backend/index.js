@@ -435,14 +435,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-import { processCSV } from './importEngine.js';
-
-// --- Import Engine Logic ---
-async function generatePreview(rawData) {
-  const db = await dbPromise;
-  const users = await db.all('SELECT * FROM users');
-  const userMap = new Map(users.map(u => [u.name.toLowerCase(), u.id]));
-
-  return processCSV(rawData, userMap);
-}
