@@ -7,6 +7,11 @@ const __dirname = path.dirname(__filename);
 
 const isPostgres = !!process.env.DATABASE_URL;
 
+// Fix for Postgres returning decimals as strings
+if (isPostgres) {
+  pg.types.setTypeParser(1700, parseFloat);
+}
+
 // Helper to convert `?` to `$1, $2` for Postgres
 function toPgParams(sql) {
   let count = 1;

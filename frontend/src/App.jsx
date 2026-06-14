@@ -16,8 +16,14 @@ const ProtectedRoute = ({ children, token }) => {
   return children;
 };
 
+// Initialize Axios default auth header if token exists
+const initialToken = localStorage.getItem('token');
+if (initialToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
+}
+
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(initialToken || null);
   const [activeUserId, setActiveUserId] = useState(localStorage.getItem('activeUserId') || null);
   const [activeGroupId, setActiveGroupId] = useState(localStorage.getItem('activeGroupId') || null);
   const [groups, setGroups] = useState([]);
