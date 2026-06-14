@@ -238,6 +238,79 @@ app.get('/api/balances', async (req, res) => {
   }
 });
 
+app.get('/api/balances/details/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const db = await dbPromise;
+
+    // What this user paid for (others owe them)
+    const paidByMe = await db.all(`
+      SELECT e.id, e.amount, e.currency, e.description, e.date, e.is_settlement, s.user_id as owes_id, s.amount_owed, u.name as owes_name
+      FROM expenses e
+      JOIN expense_splits s ON e.id = s.expense_id
+      JOIN users u ON s.user_id = u.id
+      WHERE e.paid_by_user_id = ? AND s.user_id != ?
+    `, [userId, userId]);
+
+    // What this user owes others (they paid)
+    const iOwe = await db.all(`
+      SELECT e.id, e.amount as total_amount, e.currency, e.description, e.date, e.is_settlement, e.paid_by_user_id, u.name as paid_by_name, s.amount_owed
+      FROM expenses e
+      JOIN expense_splits s ON e.id = s.expense_id
+      JOIN users u ON e.paid_by_user_id = u.id
+      WHERE s.user_id = ? AND e.paid_by_user_id != ?
+    `, [userId, userId]);
+
+    res.json({ paidByMe, iOwe });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/expenses', async (req, res) => {
+  const { paid_by_user_id, amount, currency, description, split_type, date, splitUsers } = req.body;
+  
+  if (!paid_by_user_id || !amount || !description || !splitUsers || splitUsers.length === 0) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const db = await dbPromise;
+    await db.exec('BEGIN TRANSACTION');
+
+    const expRes = await db.run(
+      `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, date, split_type, is_settlement)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [1, paid_by_user_id, amount, currency || 'INR', description, date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
+    );
+
+    const expenseId = expRes.lastID;
+    
+    // Simple equal split handling for manual entries or settlement
+    if (split_type === 'settlement') {
+        // payee is the only one in splitUsers
+        await db.run(
+          `INSERT INTO expense_splits (expense_id, user_id, amount_owed) VALUES (?, ?, ?)`,
+          [expenseId, splitUsers[0], amount]
+        );
+    } else if (split_type === 'equal') {
+      const splitAmt = amount / splitUsers.length;
+      for (const uId of splitUsers) {
+        await db.run(
+          `INSERT INTO expense_splits (expense_id, user_id, amount_owed) VALUES (?, ?, ?)`,
+          [expenseId, uId, splitAmt]
+        );
+      }
+    }
+
+    await db.exec('COMMIT');
+    res.json({ success: true, message: 'Expense added' });
+  } catch (err) {
+    await (await dbPromise).exec('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server
 const startServer = async () => {
   await initDb();
