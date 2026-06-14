@@ -6,8 +6,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
+console.log('Using database at:', dbPath);
+
 const dbPromise = open({
-  filename: path.join(__dirname, 'database.sqlite'),
+  filename: dbPath,
   driver: sqlite3.Database
 });
 
