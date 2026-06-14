@@ -14,13 +14,25 @@ const dbPromise = open({
 export const initDb = async () => {
   const db = await dbPromise;
 
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
+    // Drop existing for clean reset
+    await db.exec(`
+      DROP TABLE IF EXISTS expense_splits;
+      DROP TABLE IF EXISTS expenses;
+      DROP TABLE IF EXISTS group_members;
+      DROP TABLE IF EXISTS groups;
+      DROP TABLE IF EXISTS users;
+      DROP TABLE IF EXISTS anomalies_log;
+    `);
 
-    CREATE TABLE IF NOT EXISTS groups (
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL
     );

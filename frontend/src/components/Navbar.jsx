@@ -23,17 +23,9 @@ export default function Navbar({ users, activeUserId, onUserChange }) {
         </NavLink>
         
         <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-600">
-          <UserCircle size={18} className="text-muted" />
-          <select 
-            value={activeUserId || ''} 
-            onChange={(e) => onUserChange(e.target.value)}
-            className="bg-transparent border-none text-sm p-1 cursor-pointer focus:ring-0"
-            style={{width: 'auto'}}
-          >
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
+          <button onClick={onLogout} className="bg-transparent border-none text-muted text-sm p-1 cursor-pointer hover:text-white flex items-center gap-1">
+            <UserCircle size={18} /> Logout
+          </button>
         </div>
       </div>
     </nav>

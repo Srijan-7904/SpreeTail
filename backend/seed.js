@@ -1,27 +1,29 @@
 import dbPromise, { initDb } from './db.js';
+import bcrypt from 'bcryptjs';
 
 async function seed() {
   const db = await initDb();
 
-  // Clear existing data
-  await db.exec('DELETE FROM anomalies_log');
-  await db.exec('DELETE FROM expense_splits');
-  await db.exec('DELETE FROM expenses');
-  await db.exec('DELETE FROM group_members');
-  await db.exec('DELETE FROM groups');
-  await db.exec('DELETE FROM users');
+  // Check if seeded
+  const usersCount = await db.get('SELECT COUNT(*) as count FROM users');
+  if (usersCount.count > 0) {
+    console.log('Database already seeded or has data. Skipping seed.');
+    return;
+  }
 
-  // Insert Users
+  const passwordHash = await bcrypt.hash('password123', 10);
   const users = ['Aisha', 'Rohan', 'Priya', 'Meera', 'Dev', 'Sam'];
   const userIds = {};
 
+  // Insert Users
   for (const name of users) {
-    const result = await db.run('INSERT INTO users (name) VALUES (?)', [name]);
+    const email = `${name.toLowerCase()}@example.com`;
+    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, passwordHash]);
     userIds[name] = result.lastID;
   }
 
   // Insert Group
-  const groupRes = await db.run("INSERT INTO groups (name) VALUES ('Flatmates')");
+  const groupRes = await db.run("INSERT INTO groups (name) VALUES ('Flatmates 2026')");
   const groupId = groupRes.lastID;
 
   // Insert Group Members with their tenancies

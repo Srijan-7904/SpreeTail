@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import { initDb } from './db.js';
-import dbPromise from './db.js';
+import dbPromise, { initDb } from './db.js';
+import { generatePreview, processCSV } from './importEngine.js';
+import { requireAuth, generateToken } from './auth.js';
+import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import fs from 'fs';
 import csv from 'csv-parser';
@@ -18,6 +20,122 @@ app.use(cors());
 app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
+
+// --- AUTHENTICATION ROUTES ---
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
+
+    const db = await dbPromise;
+    const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) return res.status(400).json({ error: 'Email already exists' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashed]);
+    
+    const token = generateToken(result.lastID);
+    res.json({ token, user: { id: result.lastID, name, email } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const db = await dbPromise;
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const token = generateToken(user.id);
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const db = await dbPromise;
+    const user = await db.get('SELECT id, name, email FROM users WHERE id = ?', [req.user.id]);
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- GROUP MANAGEMENT ROUTES ---
+
+app.get('/api/groups', requireAuth, async (req, res) => {
+  try {
+    const db = await dbPromise;
+    const groups = await db.all(`
+      SELECT g.id, g.name, gm.joined_at, gm.left_at 
+      FROM groups g
+      JOIN group_members gm ON g.id = gm.group_id
+      WHERE gm.user_id = ?
+    `, [req.user.id]);
+    res.json(groups);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/groups', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body;
+    const db = await dbPromise;
+    await db.exec('BEGIN TRANSACTION');
+    
+    const gRes = await db.run('INSERT INTO groups (name) VALUES (?)', [name]);
+    const groupId = gRes.lastID;
+    
+    await db.run('INSERT INTO group_members (group_id, user_id, joined_at) VALUES (?, ?, ?)', 
+      [groupId, req.user.id, new Date().toISOString().split('T')[0]]);
+      
+    await db.exec('COMMIT');
+    res.json({ id: groupId, name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/groups/:groupId/members', requireAuth, async (req, res) => {
+  try {
+    const db = await dbPromise;
+    const members = await db.all(`
+      SELECT u.id, u.name, u.email, gm.joined_at, gm.left_at 
+      FROM users u
+      JOIN group_members gm ON u.id = gm.user_id
+      WHERE gm.group_id = ?
+    `, [req.params.groupId]);
+    res.json(members);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/groups/:groupId/members', requireAuth, async (req, res) => {
+  try {
+    const { email } = req.body;
+    const db = await dbPromise;
+    const user = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    await db.run('INSERT INTO group_members (group_id, user_id, joined_at) VALUES (?, ?, ?)', 
+      [req.params.groupId, user.id, new Date().toISOString().split('T')[0]]);
+      
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Basic health check
 app.get('/api/health', (req, res) => {
@@ -156,12 +274,7 @@ app.post('/api/expenses/import/confirm', async (req, res) => {
     res.json({ success: true, message: 'Data imported successfully' });
   } catch (err) {
     await (await dbPromise).exec('ROLLBACK');
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', requireAuth, async (req, res) => {
   try {
     const db = await dbPromise;
     const users = await db.all('SELECT id, name FROM users');
@@ -171,7 +284,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-app.get('/api/expenses', async (req, res) => {
+app.get('/api/expenses', requireAuth, async (req, res) => {
   try {
     const db = await dbPromise;
     const expenses = await db.all(`
@@ -186,7 +299,7 @@ app.get('/api/expenses', async (req, res) => {
   }
 });
 
-app.get('/api/balances', async (req, res) => {
+app.get('/api/balances', requireAuth, async (req, res) => {
   try {
     const db = await dbPromise;
     // Get all expenses and their splits
