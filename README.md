@@ -1,32 +1,54 @@
-# Shared Expenses App (FairSplit)
+# FairSplit Web Application
 
-A robust, full-stack shared expenses application designed to ingest and sanitize real-world messy data. Built with React (Vite) and Node.js (Express) with an SQLite backend.
+FairSplit is a modern, full-stack web application designed to help groups of friends, flatmates, and travelers track shared expenses seamlessly. It features a beautiful, dynamic UI and a robust dual-engine backend.
 
-## Tech Stack
-- **Frontend**: React (Vite), React Router, Vanilla CSS, Lucide React (Icons), Axios
-- **Backend**: Node.js, Express, SQLite (sqlite3/sqlite), csv-parser, multer
-- **Database**: SQLite (relational DB constraint met without requiring external setups)
+## Features
+- **Group Management:** Create groups and invite users.
+- **Expense Tracking:** Add expenses and split them equally, by exact amounts, or by percentages.
+- **Ledger & Analytics:** View a complete history of spending and beautiful visual charts of your group's finances.
+- **Smart CSV Import:** Ingest raw CSV data of past expenses. The engine automatically flags anomalies (e.g., negative numbers, math that doesn't add up) and logs them for review.
 
 ## Setup Instructions
 
-### Prerequisites
-- Node.js (v18+)
+### Local Development
+This application uses a Single Monorepo structure.
 
-### Backend Setup
-1. Open a terminal and navigate to the `backend` directory.
-2. Run `npm install` to install dependencies.
-3. Run `npm run dev` to start the backend server on `http://localhost:5000`.
-   - The database (`database.sqlite`) will be automatically seeded on start if you ran the seeder script.
-   - To manually seed the initial users and groups, run `node seed.js`.
+1. **Install Dependencies:**
+   From the root folder, install all frontend and backend dependencies in one go:
+   ```bash
+   npm run install-all
+   ```
 
-### Frontend Setup
-1. Open a new terminal and navigate to the `frontend` directory.
-2. Run `npm install` to install dependencies.
-3. Run `npm run dev` to start the Vite frontend server on `http://localhost:5173`.
-4. Open the browser to the provided localhost URL.
+2. **Start the Backend:**
+   The backend automatically uses a local SQLite database for blazing-fast development.
+   ```bash
+   cd backend
+   npm run dev
+   ```
 
-## AI Used
-- **AI Tool**: Internal Google DeepMind Assistant (Antigravity code agent).
-- **Role**: Primary development collaborator, responsible for scaffolding the project, writing boilerplate code, and implementing the anomaly detection engine under the direction of the engineer.
+3. **Start the Frontend:**
+   Open a new terminal and run:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   *Note: The React frontend automatically proxies `/api` requests to the backend.*
 
-See `AI_USAGE.md` for full details.
+### Production Deployment (Render)
+The application is configured to deploy as a **Single Web Service** on Render, running completely for free.
+
+1. Create a **Free PostgreSQL Database** on Render and copy the Internal Database URL.
+2. Create a **New Web Service** linked to your GitHub repo.
+3. Set the following Build/Start commands:
+   - **Build Command:** `npm run install-all && npm run build`
+   - **Start Command:** `npm start`
+4. Add an Environment Variable:
+   - **Key:** `DATABASE_URL`
+   - **Value:** `postgres://...` (Your internal database URL)
+
+The backend will automatically detect the `DATABASE_URL`, switch to the PostgreSQL engine, and serve the compiled React frontend!
+
+---
+
+## AI Usage
+This application was rapidly prototyped and built with the assistance of the **Antigravity Code Assistant** (Google DeepMind). See `AI_USAGE.md` for detailed notes on AI interactions, problem-solving, and prompts.

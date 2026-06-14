@@ -1,25 +1,30 @@
 # AI Usage Log
 
-## AI Tools Used
-- **Google DeepMind Antigravity Code Agent**: Used as the primary pair-programmer and autonomous development engine to scaffold, architect, and implement the application.
+**AI Tool Used:** Antigravity Code Assistant by Google DeepMind
 
 ## Key Prompts
-- *Initial Project Setup*: "Assignment: Build a Shared Expenses App... use react node js make this project"
-- *Iterative Steps*: "Continue", "implementt this project project node+react"
+Throughout the development of FairSplit, the AI was driven by high-level natural language requests. Some of the most impactful prompts included:
+* *"I want to host this on Render."* -> Prompted the AI to design a deployment strategy, migrating the codebase to a monolithic architecture so the Express backend serves the React frontend.
+* *"Make both options if I want to use localhost for checker, I share the render link."* -> Prompted the AI to build a Dual-Database Engine that uses SQLite locally but automatically switches to PostgreSQL on Render.
+* *"No, I want to do it in free."* -> Prompted the AI to completely rewrite the database schema and query structure to support Render's Free Postgres tier, saving the user $7/month on a disk.
 
-## Three Concrete Cases Where the AI Produced Something Wrong
+---
 
-1. **Incorrect placement of the Implementation Plan**
-   - *What the AI did wrong*: The AI initially attempted to create `implementation_plan.md` in the root of the user's project directory instead of its required isolated internal artifact directory.
-   - *How it was caught*: The internal validation system threw a strict pathing error (`invalid_args: c:\Users\oj\Desktop\expence app anti\implementation_plan.md is not a valid artifact path`).
-   - *What was changed*: The AI self-corrected its tool arguments to write the file strictly to `C:\Users\oj\.gemini\antigravity\brain\.../implementation_plan.md`.
+## AI Mistakes & Corrections
 
-2. **Flawed Settlement Splitting Logic**
-   - *What the AI did wrong*: When first writing the `GET /api/balances` engine, the AI added a TODO comment realizing it had no logical way to process settlements because it didn't create `expense_splits` rows for them in the backend confirmation endpoint. It left the settlement block empty.
-   - *How it was caught*: While writing the endpoint, the AI logically deduced that without an `expense_splits` row, the payer's positive balance wouldn't correctly subtract from the specific payee's negative balance.
-   - *What was changed*: The AI entirely rewrote the `app.post('/api/expenses/import/confirm')` logic to insert a targeted single-user split for the payee during a settlement event. It then deleted the specialized settlement checking logic from the `/api/balances` endpoint since settlements now evaluated identically to normal expenses natively inside the database.
+Even the most advanced AI makes mistakes. Here are three concrete cases where the AI produced something wrong, how it was caught, and exactly what was changed:
 
-3. **Vite Frontend Setup Command Inactivity**
-   - *What the AI did wrong*: The AI initially thought about running `npx create-vite@latest frontend --template react` but then recognized Vite prompts for inputs interactively which blocks the terminal background task. 
-   - *How it was caught*: Reviewing its own internal guidelines, the AI recognized the strict requirement: "You should run in non-interactive mode so that the user doesn't need to input anything."
-   - *What was changed*: The AI correctly modified the terminal command to use the non-interactive flags and current directory structure (`mkdir frontend; cd frontend; npx -y create-vite@latest . --template react`).
+### 1. Hallucinating TailwindCSS Classes
+* **What went wrong:** When building the `Analytics.jsx` dashboard, the AI used utility classes like `h-64` and `md:grid-cols-2`. These are standard TailwindCSS classes, but this project was built using a custom Vanilla CSS file. Because the classes didn't exist, the Recharts graphs rendered with a height of 0px (invisible).
+* **How it was caught:** The user reported: *"nothing is come spend by category and total paid by user"*. The AI realized its mistake by inspecting `index.css`.
+* **What changed:** The AI removed the Tailwind classes and replaced them with inline styles (`style={{ height: '300px' }}`) and the standard `.grid-cols-2` class that actually existed in the Vanilla CSS file.
+
+### 2. Express 5 Wildcard Routing Compatibility
+* **What went wrong:** When configuring the Express backend to serve the React frontend, the AI used the standard catch-all route: `app.get('*', ...)`. However, this project uses the newly released Express v5.0. Express 5 strictly enforces `path-to-regexp` v8, which rejects the lone asterisk as an invalid parameter name.
+* **How it was caught:** The Render deployment crashed on startup, throwing a fatal error: `PathError [TypeError]: Missing parameter name at index 1: *`.
+* **What changed:** The AI replaced the string wildcard with a native Regular Expression `app.get(/.*/, ...)` which correctly bypasses the strict string parsing in Express 5.
+
+### 3. Native Binary Cross-Compilation Failure (GLIBC)
+* **What went wrong:** The AI instructed the user to push their entire workspace to GitHub, which accidentally included the `node_modules` folder. The `sqlite3` module contained pre-compiled native binaries built for the user's Windows machine.
+* **How it was caught:** When Render (which runs Linux) attempted to boot the app, it crashed with `invalid ELF header` and `GLIBC_2.38 not found`, because it couldn't execute the Windows binary.
+* **What changed:** The AI created a `.gitignore` file and removed `node_modules` from the git cache via `git rm -r --cached`. To permanently bulletproof the app against SQLite binary issues on Render, the AI also rewrote the database layer to *dynamically import* `sqlite3` only if the Postgres `DATABASE_URL` was missing. This ensured Render never even attempted to load the broken binary at runtime.

@@ -1,23 +1,31 @@
 # Decision Log
 
-1. **Database Choice**: 
-   - *Options*: PostgreSQL, MySQL, SQLite
-   - *Decision*: SQLite.
-   - *Reason*: Given the tight 2-day constraint and the requirement to submit a fully functional repository, SQLite eliminates the need for external service dependencies (like spinning up a Postgres container) for the evaluator while strictly remaining a "relational DB". It fulfills the technical requirement while maximizing portability.
+This document records the significant architectural and technical decisions made during the development of FairSplit.
 
-2. **Frontend Styling**:
-   - *Decision*: Vanilla CSS utilizing CSS Custom Properties (Variables).
-   - *Reason*: To provide a modern, premium "vibrant and dynamic" aesthetic without relying on massive frameworks. CSS custom properties (`--primary`, `--surface`) allow for easy theme scaling, glassmorphism implementation, and rapid UI development.
+### 1. Dual-Database Engine (SQLite & PostgreSQL)
+* **Decision:** Implement a custom Universal Database Wrapper (`backend/db.js`) that automatically switches between SQLite and PostgreSQL based on the presence of a `DATABASE_URL` environment variable.
+* **Options Considered:** 
+  1. *SQLite Only:* Extremely fast for local development but impossible to host for free on Render due to ephemeral filesystems.
+  2. *PostgreSQL Only:* Great for production, but forces local developers to install Docker or run a heavy local Postgres server just to test the app.
+* **Why:** We wanted the best of both worlds. The abstraction layer ensures local development remains zero-config and lightning fast (SQLite), while allowing the app to be deployed to Render's free tier with zero data loss (PostgreSQL).
 
-3. **Handling of Settlements**:
-   - *Decision*: Settlements are logged in the `expenses` table with `is_settlement = true`, and a single entry is pushed to `expense_splits` where the *payee* technically "owes" the payer the settlement amount.
-   - *Reason*: This cleanly unifies the balance calculation logic. Instead of having separate ledgers for expenses and settlements, a settlement acts mathematically identical to an expense where the payer covered an amount specifically for the payee. 
+### 2. Monolithic Deployment Architecture
+* **Decision:** Configure the Express backend to serve the compiled React static files in production, combining them into a single deployable service.
+* **Options Considered:**
+  1. *Separate Services:* Deploy the React frontend to Vercel/Netlify and the Node backend to Render.
+  2. *Monolithic Service:* Deploy both in a single Render Web Service.
+* **Why:** Deploying two separate services introduces severe CORS complexity, requires synchronizing environment variables across platforms, and uses up multiple free-tier allocations. A monolithic service is simpler, robust, and bypasses all CORS issues because the API and frontend share the same origin.
 
-4. **Currency Handling**:
-   - *Options*: Hardcode an exchange rate vs Maintain separate ledgers.
-   - *Decision*: Maintain separate ledgers (`USD` and `INR`).
-   - *Reason*: Priya complained about the sheet pretending dollars are rupees. Hardcoding an exchange rate is presumptuous and could lead to loss of data accuracy. Tracking balances grouped by currency is the most correct financial engineering approach.
+### 3. Vanilla CSS vs. TailwindCSS
+* **Decision:** Utilize the existing custom Vanilla CSS utility system (`index.css`) rather than installing TailwindCSS.
+* **Options Considered:**
+  1. *Migrate to Tailwind:* Install the Tailwind build process and rewrite classes.
+  2. *Vanilla Utility Classes:* Expand the provided custom utility classes.
+* **Why:** The project was initialized with a custom, highly curated Vanilla CSS file. Ripping it out to install Tailwind would introduce unnecessary build dependencies and bloat the project. By sticking to the provided Vanilla CSS, we maintained a beautiful, premium aesthetic with micro-animations while keeping the toolchain incredibly lightweight.
 
-5. **Anomaly Resolution Workflow**:
-   - *Decision*: The import happens in a two-step "Dry Run" architecture.
-   - *Reason*: Meera explicitly requested to approve anything the app deletes or changes. By processing the CSV strictly in memory first, returning a `preview` JSON payload containing an `anomalies` array, and waiting for the user to submit an `/import/confirm` request, we satisfy the manual approval constraint gracefully via UI.
+### 4. Decimal Handling in PostgreSQL
+* **Decision:** Force the `pg` driver to parse Postgres `DECIMAL` types as JavaScript `Numbers` using `pg.types.setTypeParser(1700, parseFloat)`.
+* **Options Considered:**
+  1. *Frontend Parsing:* Wrap every `amount` variable in `Number()` inside the React components.
+  2. *Backend Parsing:* Override the Postgres driver behavior.
+* **Why:** Postgres returns `DECIMAL` values as strings to prevent floating-point precision loss. This caused crashes in the React Recharts library (`.toFixed is not a function`). Fixing it globally in the database layer prevented us from having to hunt down and patch dozens of individual state variables in the React frontend.
