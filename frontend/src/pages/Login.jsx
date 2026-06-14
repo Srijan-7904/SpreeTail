@@ -43,14 +43,24 @@ export default function Login() {
         <div>
           <label className="text-muted text-sm block mb-1">Password</label>
           <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-          <div className="text-xs text-muted mt-2">Hint: Use 'password123' for seeded users.</div>
         </div>
 
-        <button type="submit" className="mt-4 w-full">Sign In</button>
+        <button type="submit" className="mt-2 w-full">Sign In</button>
         
-        <p className="text-center text-sm text-muted mt-4">
+        <p className="text-center text-sm text-muted mt-2">
           Don't have an account? <Link to="/register" className="text-primary hover:underline">Register here</Link>
         </p>
+        
+        <div className="mt-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700">
+          <h3 className="text-sm font-semibold mb-2">🧪 Test Credentials</h3>
+          <p className="text-xs text-muted mb-3">Use any of these pre-seeded accounts to explore the app. The password for all test accounts is: <code className="bg-slate-900 px-1 py-0.5 rounded text-primary">password123</code></p>
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono text-slate-300">
+            <button type="button" onClick={() => { setEmail('aisha@example.com'); setPassword('password123'); }} className="bg-slate-900 border border-slate-700 hover:border-primary p-2 rounded text-left transition-colors">aisha@example.com</button>
+            <button type="button" onClick={() => { setEmail('rohan@example.com'); setPassword('password123'); }} className="bg-slate-900 border border-slate-700 hover:border-primary p-2 rounded text-left transition-colors">rohan@example.com</button>
+            <button type="button" onClick={() => { setEmail('priya@example.com'); setPassword('password123'); }} className="bg-slate-900 border border-slate-700 hover:border-primary p-2 rounded text-left transition-colors">priya@example.com</button>
+            <button type="button" onClick={() => { setEmail('meera@example.com'); setPassword('password123'); }} className="bg-slate-900 border border-slate-700 hover:border-primary p-2 rounded text-left transition-colors">meera@example.com</button>
+          </div>
+        </div>
       </form>
     </div>
   );

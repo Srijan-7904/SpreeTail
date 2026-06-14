@@ -43,10 +43,10 @@ export default function Analytics({ activeGroupId }) {
   }));
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div className="grid grid-cols-2 gap-6 mb-8">
       <div className="card">
         <h3 className="mb-4 font-semibold">Spending by Category</h3>
-        <div className="h-64">
+        <div style={{ height: '300px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -71,7 +71,7 @@ export default function Analytics({ activeGroupId }) {
 
       <div className="card">
         <h3 className="mb-4 font-semibold">Total Paid by User</h3>
-        <div className="h-64">
+        <div style={{ height: '300px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

@@ -43,21 +43,21 @@ export default function Expenses({ activeGroupId }) {
 
   return (
     <div className="animate-fade-in max-w-5xl mx-auto">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div className="flex items-center justify-between mb-8 gap-4">
         <div>
           <h1>Group Ledger</h1>
           <p className="text-muted">A complete history of all group spending.</p>
         </div>
         
-        <div className="flex gap-4 w-full md:w-auto">
+        <div className="flex gap-4 w-full" style={{ width: 'auto' }}>
           <input 
             type="text" 
             placeholder="Search expenses..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full md:w-64"
+            style={{ width: '256px' }}
           />
-          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full md:w-40">
+          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{ width: '160px' }}>
             <option value="All">All Categories</option>
             <option value="General">General</option>
             <option value="Food">Food</option>

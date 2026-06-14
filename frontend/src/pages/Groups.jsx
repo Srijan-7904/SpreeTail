@@ -62,7 +62,7 @@ export default function Groups({ groups, onGroupsChanged }) {
         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">Manage Groups</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {/* Sidebar: Group List & Create */}
         <div className="card space-y-6">
           <div>
@@ -99,7 +99,7 @@ export default function Groups({ groups, onGroupsChanged }) {
 
         {/* Main Panel: Group Details & Invites */}
         {selectedGroup ? (
-          <div className="md:col-span-2 space-y-6">
+          <div style={{ gridColumn: 'span 2' }} className="space-y-6">
             <div className="card">
               <h2 className="font-semibold mb-4">Group Members</h2>
               <div className="grid gap-3">
@@ -153,7 +153,7 @@ export default function Groups({ groups, onGroupsChanged }) {
             </div>
           </div>
         ) : (
-          <div className="md:col-span-2 card flex items-center justify-center text-muted">
+          <div style={{ gridColumn: 'span 2' }} className="card flex items-center justify-center text-muted">
             Select or create a group to manage members.
           </div>
         )}
