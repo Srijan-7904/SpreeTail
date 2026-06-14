@@ -1,5 +1,3 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
@@ -28,10 +26,14 @@ class UniversalDB {
     } else {
       const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
       console.log('Using SQLite database at:', dbPath);
-      this.sqlitePromise = open({
-        filename: dbPath,
-        driver: sqlite3.Database
-      });
+      this.sqlitePromise = (async () => {
+        const sqlite3 = (await import('sqlite3')).default;
+        const { open } = await import('sqlite');
+        return open({
+          filename: dbPath,
+          driver: sqlite3.Database
+        });
+      })();
     }
   }
 
