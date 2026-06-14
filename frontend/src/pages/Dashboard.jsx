@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
+import Analytics from '../components/Analytics';
 
 export default function Dashboard({ activeGroupId, activeUserId }) {
   const [data, setData] = useState(null);
@@ -61,6 +63,11 @@ export default function Dashboard({ activeGroupId, activeUserId }) {
                     <div className={`text-2xl font-bold ${isOwed ? 'text-success' : isOwes ? 'text-danger' : 'text-muted'}`}>
                       {b > 0 ? '+' : ''}{b.toFixed(2)} {currency}
                     </div>
+                    {isOwes && (
+                      <Link to={`/settle?from=${userId}&groupId=${activeGroupId}`} className="btn btn-sm btn-outline-danger mt-2">
+                        Settle Up
+                      </Link>
+                    )}
                   </div>
                 );
               })}
@@ -76,6 +83,8 @@ export default function Dashboard({ activeGroupId, activeUserId }) {
     <div className="animate-fade-in">
       <h1>Welcome, {getUserName(activeUserId)}</h1>
       
+      <Analytics activeGroupId={activeGroupId} />
+
       {/* Global Number */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         {Object.keys(balances).map(currency => {
@@ -103,7 +112,9 @@ export default function Dashboard({ activeGroupId, activeUserId }) {
 
       {details && details.iOwe.length > 0 && (
         <div className="card mb-4">
-          <h3 className="text-danger mb-4">You Owe Others</h3>
+          <h3 className="text-danger mb-4 flex items-center justify-between">
+            <span>You Owe Others</span>
+          </h3>
           <table>
             <thead>
               <tr>
@@ -111,15 +122,26 @@ export default function Dashboard({ activeGroupId, activeUserId }) {
                 <th>Owe To</th>
                 <th>For</th>
                 <th>Amount</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {details.iOwe.map(item => (
                 <tr key={`${item.id}-${item.paid_by_user_id}`}>
                   <td>{item.date}</td>
-                  <td className="font-bold">{item.paid_by_name}</td>
+                  <td className="font-bold text-white">{item.paid_by_name}</td>
                   <td>{item.description} {item.is_settlement ? '(Settlement)' : ''}</td>
                   <td className="text-danger font-bold">-{item.amount_owed.toFixed(2)} {item.currency}</td>
+                  <td className="text-right">
+                    {!item.is_settlement && (
+                      <Link 
+                        to={`/expenses/add?settle=${item.paid_by_user_id}&amount=${item.amount_owed}&currency=${item.currency}`} 
+                        className="btn bg-slate-700 hover:bg-slate-600 text-xs px-3 py-1 inline-block"
+                      >
+                        Settle Up
+                      </Link>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

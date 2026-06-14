@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Check } from 'lucide-react';
 
@@ -14,9 +14,36 @@ export default function AddExpense({ users, activeUserId, activeGroupId }) {
   
   // For settlement: select who we are paying
   const [payee, setPayee] = useState('');
-
+  const [paidBy, setPaidBy] = useState(activeUserId);
+  const [category, setCategory] = useState('General');
+  const [splits, setSplits] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const settleId = params.get('settle');
+    const settleAmt = params.get('amount');
+    const settleCur = params.get('currency');
+
+    if (settleId) {
+      setSplitType('settlement');
+      setPayee(settleId);
+      if (settleAmt) setAmount(settleAmt);
+      if (settleCur) setCurrency(settleCur);
+      setDescription('Settlement');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeUserId && users.length > 0) {
+      setPaidBy(activeUserId);
+      const eq = 100 / users.length;
+      const initialSplits = {};
+      users.forEach(u => initialSplits[u.id] = eq.toFixed(2));
+      setSplits(initialSplits);
+    }
+  }, [users, activeUserId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,23 +51,22 @@ export default function AddExpense({ users, activeUserId, activeGroupId }) {
 
     const payload = {
       groupId: activeGroupId,
-      paid_by_user_id: activeUserId,
+      paid_by_user_id: paidBy,
       amount: parseFloat(amount),
       currency,
       description,
+      category,
       split_type: splitType,
-      date: date || undefined,
+      date: date || new Date().toISOString().split('T')[0],
       splitUsers: splitType === 'settlement' ? [parseInt(payee)] : selectedUsers
     };
 
     try {
       await axios.post('http://localhost:5000/api/expenses', payload);
-      setSuccess(true);
-      setAmount('');
-      setDescription('');
+      window.location.href = '/expenses';
     } catch (err) {
       console.error(err);
-      alert('Failed to add expense.');
+      alert('Failed to add expense');
     } finally {
       setLoading(false);
     }
@@ -81,12 +107,26 @@ export default function AddExpense({ users, activeUserId, activeGroupId }) {
             <label className="text-muted text-sm block mb-1">Amount</label>
             <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
           </div>
-          <div>
-            <label className="text-muted text-sm block mb-1">Currency</label>
-            <select value={currency} onChange={e => setCurrency(e.target.value)}>
-              <option value="INR">INR (₹)</option>
-              <option value="USD">USD ($)</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="form-group">
+              <label className="text-muted text-sm block mb-1">Currency</label>
+              <select value={currency} onChange={e => setCurrency(e.target.value)}>
+                <option value="INR">INR (₹)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="text-muted text-sm block mb-1">Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)}>
+                <option value="General">General</option>
+                <option value="Food">Food 🍔</option>
+                <option value="Travel">Travel ✈️</option>
+                <option value="Rent">Rent 🏠</option>
+                <option value="Groceries">Groceries 🛒</option>
+                <option value="Utilities">Utilities 💡</option>
+              </select>
+            </div>
           </div>
         </div>
 

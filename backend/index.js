@@ -296,7 +296,7 @@ app.get('/api/expenses', requireAuth, async (req, res) => {
 
     const db = await dbPromise;
     const expenses = await db.all(`
-      SELECT e.id, e.amount, e.currency, e.description, e.date, e.split_type, e.is_settlement, u.name as paid_by
+      SELECT e.id, e.amount, e.currency, e.description, e.category, e.date, e.split_type, e.is_settlement, u.name as paid_by
       FROM expenses e
       JOIN users u ON e.paid_by_user_id = u.id
       WHERE e.group_id = ?
@@ -309,6 +309,8 @@ app.get('/api/expenses', requireAuth, async (req, res) => {
 });
 
 app.get('/api/balances', requireAuth, async (req, res) => {
+// ... skipped updating balances as category isn't needed there right now ...
+
   try {
     const groupId = req.query.groupId;
     if (!groupId) return res.status(400).json({ error: 'groupId is required' });
@@ -401,7 +403,7 @@ app.get('/api/balances/details/:userId', async (req, res) => {
 });
 
 app.post('/api/expenses', async (req, res) => {
-  const { groupId, paid_by_user_id, amount, currency, description, split_type, date, splitUsers } = req.body;
+  const { groupId, paid_by_user_id, amount, currency, description, category, split_type, date, splitUsers } = req.body;
   
   if (!groupId || !paid_by_user_id || !amount || !description || !splitUsers || splitUsers.length === 0) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -412,9 +414,9 @@ app.post('/api/expenses', async (req, res) => {
     await db.exec('BEGIN TRANSACTION');
 
     const expRes = await db.run(
-      `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, date, split_type, is_settlement)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [groupId, paid_by_user_id, amount, currency || 'INR', description, date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
+      `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, category, date, split_type, is_settlement)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [groupId, paid_by_user_id, amount, currency || 'INR', description, category || 'General', date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
     );
 
     const expenseId = expRes.lastID;

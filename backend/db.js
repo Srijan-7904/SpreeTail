@@ -38,20 +38,21 @@ export const initDb = async () => {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
-    CREATE TABLE IF NOT EXISTS expenses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      group_id INTEGER NOT NULL,
-      paid_by_user_id INTEGER NOT NULL,
-      amount REAL NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'INR',
-      description TEXT,
-      date DATE NOT NULL,
-      split_type TEXT NOT NULL,
-      notes TEXT,
-      is_settlement BOOLEAN DEFAULT 0,
-      FOREIGN KEY (group_id) REFERENCES groups(id),
-      FOREIGN KEY (paid_by_user_id) REFERENCES users(id)
-    );
+      CREATE TABLE IF NOT EXISTS expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        paid_by_user_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        currency TEXT DEFAULT 'INR',
+        description TEXT NOT NULL,
+        category TEXT DEFAULT 'General',
+        date TEXT NOT NULL,
+        split_type TEXT NOT NULL,
+        notes TEXT,
+        is_settlement INTEGER DEFAULT 0,
+        FOREIGN KEY(group_id) REFERENCES groups(id),
+        FOREIGN KEY(paid_by_user_id) REFERENCES users(id)
+      );
 
     CREATE TABLE IF NOT EXISTS expense_splits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
