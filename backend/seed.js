@@ -18,12 +18,12 @@ async function seed() {
   // Insert Users
   for (const name of users) {
     const email = `${name.toLowerCase()}@example.com`;
-    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, passwordHash]);
+    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?) RETURNING id', [name, email, passwordHash]);
     userIds[name] = result.lastID;
   }
 
   // Insert Group
-  const groupRes = await db.run("INSERT INTO groups (name) VALUES ('Flatmates 2026')");
+  const groupRes = await db.run("INSERT INTO groups (name) VALUES ('Flatmates 2026') RETURNING id");
   const groupId = groupRes.lastID;
 
   // Insert Group Members with their tenancies

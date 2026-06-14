@@ -33,7 +33,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const hashed = await bcrypt.hash(password, 10);
-    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashed]);
+    const result = await db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?) RETURNING id', [name, email, hashed]);
     
     const token = generateToken(result.lastID);
     res.json({ token, user: { id: result.lastID, name, email } });
@@ -93,7 +93,7 @@ app.post('/api/groups', requireAuth, async (req, res) => {
     const db = await dbPromise;
     await db.exec('BEGIN TRANSACTION');
     
-    const gRes = await db.run('INSERT INTO groups (name) VALUES (?)', [name]);
+    const gRes = await db.run('INSERT INTO groups (name) VALUES (?) RETURNING id', [name]);
     const groupId = gRes.lastID;
     
     await db.run('INSERT INTO group_members (group_id, user_id, joined_at) VALUES (?, ?, ?)', 
@@ -194,7 +194,7 @@ app.post('/api/expenses/import/confirm', async (req, res) => {
 
       const expRes = await db.run(
         `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, date, split_type, notes, is_settlement)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         [
           groupId,
           expense.paid_by_user_id,
@@ -415,7 +415,7 @@ app.post('/api/expenses', async (req, res) => {
 
     const expRes = await db.run(
       `INSERT INTO expenses (group_id, paid_by_user_id, amount, currency, description, category, date, split_type, is_settlement)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [groupId, paid_by_user_id, amount, currency || 'INR', description, category || 'General', date || new Date().toISOString().split('T')[0], split_type, split_type === 'settlement' ? 1 : 0]
     );
 
