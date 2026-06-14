@@ -7,6 +7,7 @@ export default function Import({ activeGroupId }) {
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [lastAnomalies, setLastAnomalies] = useState(null);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -39,6 +40,7 @@ export default function Import({ activeGroupId }) {
         resolvedData: previewData.processed,
         anomalies: previewData.anomalies
       });
+      setLastAnomalies(previewData.anomalies);
       setImportSuccess(true);
       setPreviewData(null);
       setFile(null);
@@ -48,6 +50,28 @@ export default function Import({ activeGroupId }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadReport = () => {
+    if (!lastAnomalies) return;
+    let content = "# CSV Import Anomaly Report\n\n";
+    content += `Generated on: ${new Date().toLocaleString()}\n\n`;
+    content += `Total Anomalies Detected: ${lastAnomalies.length}\n`;
+    content += `Status: Automatically Resolved & Imported\n\n`;
+    
+    lastAnomalies.forEach((a, i) => {
+      content += `### Anomaly ${i + 1}: ${a.issueType}\n`;
+      content += `* Row Data: ${JSON.stringify(a.originalRow)}\n`;
+      content += `* Action Taken: ${a.resolution}\n\n`;
+    });
+    
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Import_Report.md';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleApproval = (index) => {
@@ -64,8 +88,17 @@ export default function Import({ activeGroupId }) {
 
       {importSuccess && (
         <div className="card mb-4 bg-green-900/20 border-green-500/30">
-          <h3 className="text-success flex items-center gap-2"><Check /> Import Successful!</h3>
-          <p className="text-muted mt-2">Your expenses have been successfully imported and balances updated.</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-success flex items-center gap-2"><Check /> Import Successful!</h3>
+              <p className="text-muted mt-2">Your expenses have been successfully imported and balances updated.</p>
+            </div>
+            {lastAnomalies && lastAnomalies.length > 0 && (
+              <button onClick={downloadReport} className="secondary text-sm">
+                Download Import Report
+              </button>
+            )}
+          </div>
         </div>
       )}
 
