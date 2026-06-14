@@ -14,7 +14,7 @@ export default function Groups({ groups, onGroupsChanged }) {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/groups/${selectedGroup}/members`);
+      const res = await axios.get(`/api/groups/${selectedGroup}/members`);
       setMembers(res.data);
     } catch (err) {
       console.error(err);
@@ -25,7 +25,7 @@ export default function Groups({ groups, onGroupsChanged }) {
     e.preventDefault();
     if (!newGroupName) return;
     try {
-      const res = await axios.post('http://localhost:5000/api/groups', { name: newGroupName });
+      const res = await axios.post('/api/groups', { name: newGroupName });
       setNewGroupName('');
       onGroupsChanged(); // Refresh groups in App.jsx
       setSelectedGroup(res.data.id);
@@ -38,7 +38,7 @@ export default function Groups({ groups, onGroupsChanged }) {
     e.preventDefault();
     if (!searchQuery) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/search?q=${searchQuery}`);
+      const res = await axios.get(`/api/users/search?q=${searchQuery}`);
       setSearchResults(res.data);
     } catch (err) {
       console.error(err);
@@ -47,7 +47,7 @@ export default function Groups({ groups, onGroupsChanged }) {
 
   const handleInvite = async (email) => {
     try {
-      await axios.post(`http://localhost:5000/api/groups/${selectedGroup}/members`, { email });
+      await axios.post(`/api/groups/${selectedGroup}/members`, { email });
       setSearchResults([]);
       setSearchQuery('');
       fetchMembers();

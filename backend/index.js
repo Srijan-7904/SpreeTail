@@ -455,6 +455,13 @@ async function generatePreview(rawData) {
   return processCSV(rawData, userMap);
 }
 
+// Serve React Frontend in Production
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
 // Start server
 const startServer = async () => {
   await initDb();

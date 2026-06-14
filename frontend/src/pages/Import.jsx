@@ -19,7 +19,7 @@ export default function Import({ activeGroupId }) {
     formData.append('file', file);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/expenses/import/preview', formData, {
+      const res = await axios.post('/api/expenses/import/preview', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setPreviewData(res.data);
@@ -34,7 +34,7 @@ export default function Import({ activeGroupId }) {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/expenses/import/confirm', {
+      await axios.post('/api/expenses/import/confirm', {
         groupId: activeGroupId,
         resolvedData: previewData.processed,
         anomalies: previewData.anomalies

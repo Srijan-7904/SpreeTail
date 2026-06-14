@@ -7,7 +7,7 @@ export default function Analytics({ activeGroupId }) {
 
   useEffect(() => {
     if (activeGroupId) {
-      axios.get(`http://localhost:5000/api/expenses?groupId=${activeGroupId}`)
+      axios.get(`/api/expenses?groupId=${activeGroupId}`)
         .then(res => setExpenses(res.data))
         .catch(console.error);
     }

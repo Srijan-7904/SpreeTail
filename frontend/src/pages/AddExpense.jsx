@@ -62,7 +62,7 @@ export default function AddExpense({ users, activeUserId, activeGroupId }) {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/expenses', payload);
+      await axios.post('/api/expenses', payload);
       window.location.href = '/expenses';
     } catch (err) {
       console.error(err);

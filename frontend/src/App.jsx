@@ -34,14 +34,14 @@ function App() {
     if (activeGroupId && token) {
       localStorage.setItem('activeGroupId', activeGroupId);
       // Fetch users for the active group
-      axios.get(`http://localhost:5000/api/groups/${activeGroupId}/members`)
+      axios.get(`/api/groups/${activeGroupId}/members`)
         .then(res => setUsers(res.data))
         .catch(console.error);
     }
   }, [activeGroupId, token]);
 
   const fetchGroups = () => {
-    axios.get('http://localhost:5000/api/groups').then(res => {
+    axios.get('/api/groups').then(res => {
       setGroups(res.data);
       if (res.data.length > 0 && !activeGroupId) {
         setActiveGroupId(res.data[0].id.toString());

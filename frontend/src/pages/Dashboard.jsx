@@ -17,10 +17,10 @@ export default function Dashboard({ activeGroupId, activeUserId }) {
     if (!activeGroupId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/balances?groupId=${activeGroupId}`);
+      const res = await axios.get(`/api/balances?groupId=${activeGroupId}`);
       setData(res.data);
       if (activeUserId) {
-        const detailsRes = await axios.get(`http://localhost:5000/api/balances/details/${activeUserId}?groupId=${activeGroupId}`);
+        const detailsRes = await axios.get(`/api/balances/details/${activeUserId}?groupId=${activeGroupId}`);
         setDetails(detailsRes.data);
       }
     } catch (err) {
